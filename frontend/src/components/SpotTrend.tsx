@@ -50,10 +50,21 @@ function projectExponential(weeklyPct: number | null) {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
+  const close = payload.find((p: any) => p.dataKey === "close");
+  const trend = payload.find((p: any) => p.dataKey === "trend");
   return (
     <div className="tooltip-box">
-      <p style={{ color: "#94a3b8", fontSize: "0.68rem" }}>{label}</p>
-      <p><strong>{payload[0].value.toFixed(4)}</strong></p>
+      <p style={{ color: "#94a3b8", fontSize: "0.68rem", marginBottom: 4 }}>{label}</p>
+      {close && (
+        <p style={{ color: close.color }}>
+          Spot <strong>{close.value.toFixed(4)}</strong>
+        </p>
+      )}
+      {trend && (
+        <p style={{ color: "#64748b" }}>
+          Corridor <strong>{trend.value.toFixed(4)}</strong>
+        </p>
+      )}
     </div>
   );
 };
@@ -75,8 +86,10 @@ export default function SpotTrend({ market }: Props) {
   });
 
   const closes = history.map((d) => d.close);
-  const yMin = closes.length ? Math.min(...closes) * 0.9995 : 0;
-  const yMax = closes.length ? Math.max(...closes) * 1.0005 : 1;
+  const trends = chartData.map((d) => d.trend);
+  const allVals = [...closes, ...trends];
+  const yMin = allVals.length ? Math.min(...allVals) * 0.9995 : 0;
+  const yMax = allVals.length ? Math.max(...allVals) * 1.0005 : 1;
 
   return (
     <div className="spot-trend-panel">
