@@ -6,38 +6,69 @@ borsapy 0.8.7 API:
   VIOP().currency_futures  →  DataFrame with columns:
     code, contract, price, change, volume_tl, volume_qty, category
   Contract codes: F_USDTRY{MMYY}  (e.g. F_USDTRY0526 = May 2026)
-                  TM_F_USDTRY{DDMMYY}  (weekly contracts)
+                  TM_F_USDTRY{DDMMYY}  (weekly contracts with exact date)
+
+Expiry convention (verified against Borsa Istanbul exchange calendar):
+  Monthly contracts → last business day of the contract month.
+  "Business day" = Monday–Friday, excluding Turkish public holidays AND
+  the arife (eve) of Ramazan/Kurban Bayramı, which the exchange also closes.
+  Weekly contracts → the exact date embedded in the code.
 """
 
 import logging
 import re
 from datetime import date, timedelta
 import math
+from functools import lru_cache
 from typing import Optional
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Standard tenors in days
 TENORS = {"1M": 30, "3M": 91, "6M": 182, "12M": 365}
-
-# Minimum days to expiry to be considered liquid
 MIN_DAYS = 5
 
 
-def _last_friday(year: int, month: int) -> date:
-    """Return the last Friday of a given month."""
-    # Start from the last day of the month and walk back
+@lru_cache(maxsize=16)
+def _turkish_market_holidays(year: int):
+    """
+    Return a set of dates that are non-trading days in Turkey for the given year.
+    Includes official public holidays plus the arife (eve) of Bayram periods,
+    on which the exchange is closed.
+    """
+    import holidays as hd
+    tr = hd.Turkey(years=year)
+    extras = {}
+    bayram_keywords = ["Kurban", "Ramazan", "Eid"]
+    for d, name in list(tr.items()):
+        if any(k in name for k in bayram_keywords):
+            arife = d - timedelta(days=1)
+            if arife.weekday() < 5 and arife not in tr:
+                extras[arife] = f"{name} Arife"
+    tr.update(extras)
+    return tr
+
+
+def _last_business_day(year: int, month: int) -> date:
+    """
+    Return the last business day of a given month, respecting
+    Turkish public holidays and Bayram arife closures.
+    Matches Borsa Istanbul VIOP contract expiry dates.
+    """
     if month == 12:
-        last_day = date(year + 1, 1, 1) - timedelta(days=1)
+        last = date(year + 1, 1, 1) - timedelta(days=1)
     else:
-        last_day = date(year, month + 1, 1) - timedelta(days=1)
-    days_back = (last_day.weekday() - 4) % 7  # 4 = Friday
-    return last_day - timedelta(days=days_back)
+        last = date(year, month + 1, 1) - timedelta(days=1)
+
+    holidays = _turkish_market_holidays(year)
+    d = last
+    while d.weekday() >= 5 or d in holidays:
+        d -= timedelta(days=1)
+    return d
 
 
 def _parse_monthly_expiry(code: str) -> Optional[date]:
-    """Parse F_USDTRY{MMYY} → expiry date (last Friday of that month)."""
+    """Parse F_USDTRY{MMYY} → last business day of that month."""
     m = re.match(r"F_USDTRY(\d{2})(\d{2})$", code)
     if not m:
         return None
@@ -45,11 +76,11 @@ def _parse_monthly_expiry(code: str) -> Optional[date]:
     year = 2000 + year_2d
     if not (1 <= month <= 12):
         return None
-    return _last_friday(year, month)
+    return _last_business_day(year, month)
 
 
 def _parse_weekly_expiry(code: str) -> Optional[date]:
-    """Parse TM_F_USDTRY{DDMMYY} → exact expiry date."""
+    """Parse TM_F_USDTRY{DDMMYY} → exact expiry date embedded in code."""
     m = re.match(r"TM_F_USDTRY(\d{2})(\d{2})(\d{2})$", code)
     if not m:
         return None
@@ -79,15 +110,11 @@ def fetch_raw_contracts(today: Optional[date] = None) -> pd.DataFrame:
     if raw is None or raw.empty:
         raise RuntimeError("borsapy returned empty DataFrame")
 
-    # Defensive column detection
     logger.info("borsapy columns: %s", list(raw.columns))
-    logger.debug("\n%s", raw.to_string())
 
-    # Identify price column
     price_candidates = ["price", "last", "close", "settlement", "Son", "Fiyat", "SonFiyat", "uzlasma"]
     price_col = next((c for c in price_candidates if c in raw.columns), None)
 
-    # Identify symbol/code column
     code_candidates = ["code", "symbol", "Sembol", "kod", "Kod"]
     code_col = next((c for c in code_candidates if c in raw.columns), None)
 
@@ -109,11 +136,7 @@ def fetch_raw_contracts(today: Optional[date] = None) -> pd.DataFrame:
         except (ValueError, TypeError):
             continue
 
-        if price <= 0:
-            continue
-
-        # Only USDTRY contracts
-        if "USDTRY" not in code:
+        if price <= 0 or "USDTRY" not in code:
             continue
 
         expiry = _parse_monthly_expiry(code) or _parse_weekly_expiry(code)
@@ -142,26 +165,14 @@ def fetch_raw_contracts(today: Optional[date] = None) -> pd.DataFrame:
 
 
 def _log_linear_interp(t: float, t1: float, f1: float, t2: float, f2: float) -> float:
-    """Log-linear interpolation between two (time, forward) pairs."""
     return math.exp(math.log(f1) + (t - t1) / (t2 - t1) * (math.log(f2) - math.log(f1)))
 
 
-def interpolate_tenors(
-    contracts: pd.DataFrame, today: Optional[date] = None
-) -> dict:
+def interpolate_tenors(contracts: pd.DataFrame, today: Optional[date] = None) -> dict:
     """
-    Given raw contracts DataFrame, interpolate to standard tenors.
-
-    Returns dict keyed by tenor label:
-      {
-        "1M": {
-          "days": 30,
-          "price": <interpolated forward>,
-          "extrapolated": False,
-          "bracket": [{"symbol":..., "price":..., "days":...}, ...]
-        },
-        ...
-      }
+    Interpolate to standard tenors (1M, 3M, 6M, 12M) using log-linear method.
+    Extrapolates from the two furthest contracts when no contract exists beyond
+    the target tenor, and flags the result as EXTRAPOLATED.
     """
     today = today or date.today()
     result = {}
@@ -169,11 +180,9 @@ def interpolate_tenors(
     for label, target_days in TENORS.items():
         below = contracts[contracts["days_to_expiry"] <= target_days]
         above = contracts[contracts["days_to_expiry"] > target_days]
-
         extrapolated = False
 
         if above.empty:
-            # Extrapolate from the two furthest contracts
             if len(contracts) < 2:
                 result[label] = None
                 continue
@@ -190,13 +199,12 @@ def interpolate_tenors(
                 {"symbol": c2["symbol"], "price": c2["price"], "days": int(c2["days_to_expiry"])},
             ]
         elif below.empty:
-            # Target is before all contracts — use nearest contract as proxy
             c = above.iloc[0]
             price = c["price"]
             bracket = [{"symbol": c["symbol"], "price": c["price"], "days": int(c["days_to_expiry"])}]
         else:
-            c1 = below.iloc[-1]   # nearest below
-            c2 = above.iloc[0]    # nearest above
+            c1 = below.iloc[-1]
+            c2 = above.iloc[0]
             if c1["days_to_expiry"] == c2["days_to_expiry"]:
                 price = c1["price"]
             else:
@@ -221,14 +229,9 @@ def interpolate_tenors(
 
 
 def get_viop_snapshot() -> dict:
-    """
-    Main entry point: fetch contracts, interpolate, return snapshot dict.
-    Raises RuntimeError on failure.
-    """
     contracts = fetch_raw_contracts()
     tenors = interpolate_tenors(contracts)
     raw_list = contracts.to_dict(orient="records")
-    # Make dates JSON-serialisable
     for r in raw_list:
         r["expiry"] = r["expiry"].isoformat()
     return {"tenors": tenors, "raw_contracts": raw_list}

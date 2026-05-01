@@ -1,9 +1,9 @@
 """
 cip.py — Covered Interest Parity forward calculation.
 
-F_theoretical = Spot × (1 + r_TRY × t) / (1 + r_USD × t)
+F_theoretical = Spot × (1 + r_TRY)^t / (1 + r_USD)^t
 
-Convention: simple interest, NOT continuous.
+Convention: compound interest (discrete annual compounding).
 t = days / 365
 """
 
@@ -19,10 +19,10 @@ def cip_forward(spot: float, r_try: float, r_usd: float, days: int) -> float:
         days:  days to maturity
 
     Returns:
-        F_theoretical (simple interest, not continuous)
+        F_theoretical using discrete annual compounding
     """
     t = days / 365.0
-    return spot * (1 + r_try * t) / (1 + r_usd * t)
+    return spot * ((1 + r_try) ** t) / ((1 + r_usd) ** t)
 
 
 def implied_annual_depreciation(forward: float, spot: float, days: int) -> float:

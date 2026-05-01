@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchSnapshot, type Snapshot } from "./api/client";
+import SpotTrend from "./components/SpotTrend";
+import TenorStrip from "./components/TenorStrip";
 import EpsilonCurve from "./components/EpsilonCurve";
 import ImpliedDepreciation from "./components/ImpliedDepreciation";
 import KeyNumbers from "./components/KeyNumbers";
@@ -85,6 +87,12 @@ export default function App() {
 
       {data && (
         <main className="panels">
+          <SpotTrend market={data.market} />
+          <TenorStrip
+            data={data.contract_epsilon}
+            spot={data.market.spot}
+            weeklyChangePct={data.market.weekly_change_pct}
+          />
           <EpsilonCurve data={data.epsilon} />
           <ImpliedDepreciation data={data.epsilon} />
           <KeyNumbers
@@ -99,7 +107,7 @@ export default function App() {
       <footer className="app-footer">
         Sources: VIOP via borsapy · Spot via yfinance · r_TRY{" "}
         {data?.market.r_try_source ?? "manual"} · r_USD{" "}
-        {data?.market.r_usd_source ?? "—"} · Simple interest (CIP)
+        {data?.market.r_usd_source ?? "—"} · Compound interest CIP
       </footer>
     </div>
   );

@@ -380,6 +380,227 @@ body {
   50% { opacity: 0.4; }
 }
 
+/* ── Spot Trend panel ─────────────────────────────────────────── */
+.spot-trend-panel {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.st-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.st-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.st-spot {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin: 2px 0;
+}
+
+.st-weekly-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.st-weekly-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.st-weekly-sub {
+  font-size: 0.65rem;
+  color: #475569;
+}
+
+.st-trend-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.st-trend-detail {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.st-benchmark {
+  font-size: 0.62rem;
+  color: #334155;
+  margin-top: 2px;
+}
+
+.st-proj-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.st-proj-card {
+  background: #0a1628;
+  border: 1px solid #1e293b;
+  border-radius: 5px;
+  padding: 5px 7px;
+}
+
+.st-proj-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.st-proj-val {
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.st-proj-sub {
+  font-size: 0.55rem;
+  color: #334155;
+}
+
+.st-right {
+  min-width: 0;
+}
+
+.st-chart-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+/* ── Tenor Strip ──────────────────────────────────────────────── */
+.tenor-strip-panel {}
+
+.ts-grid {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ts-card {
+  flex: 0 0 100px;
+  background: #0a1628;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 0.6rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ts-days {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.ts-symbol {
+  font-size: 0.58rem;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-price-row {
+  margin-top: 3px;
+}
+
+.ts-price-act {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ts-price-cip {
+  font-size: 0.62rem;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.ts-bar-wrap {
+  margin: 4px 0 1px;
+}
+
+.ts-bar-track {
+  height: 4px;
+  background: #1e293b;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+}
+
+.ts-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.ts-eps {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ts-signal {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-align: center;
+  width: fit-content;
+}
+
+.ts-dep {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.ts-dep-sep {
+  color: #334155;
+  margin: 0 2px;
+}
+
+.ts-dep-label {
+  font-size: 0.55rem;
+  color: #334155;
+}
+
 /* ── Footer ───────────────────────────────────────────────────── */
 .app-footer {
   margin-top: 1.5rem;
@@ -395,6 +616,7 @@ body {
   .kn-grid { grid-template-columns: repeat(2, 1fr); }
   .tenor-annotation-grid { grid-template-columns: repeat(2, 1fr); }
   .eps-row { grid-template-columns: 50px 40px 1fr 1fr 80px 1fr; font-size: 0.7rem; }
+  .spot-trend-panel { grid-template-columns: 180px 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -402,4 +624,6 @@ body {
   .kn-grid { grid-template-columns: 1fr 1fr; }
   .tenor-annotation-grid { grid-template-columns: 1fr 1fr; }
   .app-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .spot-trend-panel { grid-template-columns: 1fr; }
+  .st-spot { font-size: 1.8rem; }
 }

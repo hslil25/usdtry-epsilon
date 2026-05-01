@@ -70,10 +70,14 @@ def snapshot():
 
     # --- ε computation ---
     epsilon_results = []
-    if spot and r_try is not None and r_usd is not None and viop_tenors:
+    contract_epsilon = []
+    if spot and r_try is not None and r_usd is not None:
         try:
-            from backend.model.epsilon import compute_epsilon_snapshot
-            epsilon_results = compute_epsilon_snapshot(spot, r_try, r_usd, viop_tenors)
+            from backend.model.epsilon import compute_epsilon_snapshot, compute_contract_epsilon
+            if viop_tenors:
+                epsilon_results = compute_epsilon_snapshot(spot, r_try, r_usd, viop_tenors)
+            if viop_raw:
+                contract_epsilon = compute_contract_epsilon(spot, r_try, r_usd, viop_raw)
         except Exception as e:
             logger.error("epsilon computation failed: %s", e)
             errors.append(f"epsilon: {e}")
@@ -88,10 +92,13 @@ def snapshot():
             "r_usd": r_usd,
             "r_usd_source": market.get("r_usd_source"),
             "interest_differential": (
-                round((r_try or 0) - (r_usd or 0), 6) if r_try and r_usd else None
+                round((1 + r_try) / (1 + r_usd) - 1, 6) if r_try and r_usd else None
             ),
+            "spot_history": market.get("spot_history", []),
+            "weekly_change_pct": market.get("weekly_change_pct"),
         },
         "epsilon": epsilon_results,
+        "contract_epsilon": contract_epsilon,
         "viop_contracts": viop_raw,
         "errors": errors,
         "viop_error": viop_error,

@@ -82,3 +82,38 @@ def compute_epsilon_snapshot(
         })
 
     return results
+
+
+def compute_contract_epsilon(
+    spot: float,
+    r_try: float,
+    r_usd: float,
+    raw_contracts: list[dict],
+) -> list[dict]:
+    """
+    Compute ε for every raw VIOP contract (not interpolated tenors).
+    raw_contracts: list from viop.fetch_raw_contracts().to_dict(orient='records')
+
+    Returns list sorted by days_to_expiry.
+    """
+    results = []
+    for c in raw_contracts:
+        days = int(c["days_to_expiry"])
+        f_actual = float(c["price"])
+        f_theoretical = cip_forward(spot, r_try, r_usd, days)
+        eps = f_actual - f_theoretical
+        signal = classify_epsilon(eps, spot)
+        dep_market = implied_annual_depreciation(f_actual, spot, days)
+        dep_cip = implied_annual_depreciation(f_theoretical, spot, days)
+        results.append({
+            "symbol": c["symbol"],
+            "expiry": c["expiry"],
+            "days": days,
+            "f_actual": round(f_actual, 4),
+            "f_theoretical": round(f_theoretical, 4),
+            "epsilon": round(eps, 4),
+            "signal": signal,
+            "dep_market_pct": round(dep_market, 2),
+            "dep_cip_pct": round(dep_cip, 2),
+        })
+    return sorted(results, key=lambda x: x["days"])

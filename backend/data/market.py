@@ -96,9 +96,30 @@ def get_r_usd() -> Tuple[float, str]:
     return rate, "manual-fallback"
 
 
+def get_spot_history(days: int = 10) -> list[dict]:
+    """
+    Return last `days` calendar days of USDTRY=X closes.
+    Each item: {"date": "YYYY-MM-DD", "close": float}
+    Returns at most 7 trading days (weekends excluded automatically by yfinance).
+    """
+    try:
+        import yfinance as yf
+        hist = yf.Ticker("USDTRY=X").history(period=f"{days}d")
+        if hist.empty:
+            return []
+        hist = hist.tail(7)
+        return [
+            {"date": idx.strftime("%Y-%m-%d"), "close": round(float(row["Close"]), 4)}
+            for idx, row in hist.iterrows()
+        ]
+    except Exception as e:
+        logger.warning("spot history fetch failed: %s", e)
+        return []
+
+
 def get_all_market_data() -> dict:
     """
-    Fetch spot, r_TRY, r_USD. Return dict with values and source labels.
+    Fetch spot, r_TRY, r_USD, and 7-day history. Return dict with values and source labels.
     """
     errors = []
     spot, spot_src = None, "error"
@@ -110,6 +131,16 @@ def get_all_market_data() -> dict:
     r_try, r_try_src = get_r_try()
     r_usd, r_usd_src = get_r_usd()
 
+    history = get_spot_history()
+
+    # Weekly change: first available day vs last (today)
+    weekly_change_pct = None
+    if len(history) >= 2:
+        first_close = history[0]["close"]
+        last_close = history[-1]["close"]
+        if first_close > 0:
+            weekly_change_pct = round((last_close / first_close - 1) * 100, 4)
+
     return {
         "spot": spot,
         "spot_source": spot_src,
@@ -117,5 +148,7 @@ def get_all_market_data() -> dict:
         "r_try_source": r_try_src,
         "r_usd": r_usd,
         "r_usd_source": r_usd_src,
+        "spot_history": history,
+        "weekly_change_pct": weekly_change_pct,
         "errors": errors,
     }
