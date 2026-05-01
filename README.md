@@ -17,10 +17,3 @@ VIOP'ta işlem gören USD/TRY vadeli sözleşmelerinin piyasa fiyatlarını çek
 | Neutral | CIP ile uyumlu |
 | Break Premium | Piyasa CIP'in üzerinde; kur baskısı var |
 | Acute Stress | Ciddi ayrışma; yüksek devalüasyon beklentisi |
-
-## Veri Kaynakları
-
-- **VIOP sözleşmeleri** — borsapy (canlı)
-- **Spot kur & 7 günlük geçmiş** — yfinance (USDTRY=X)
-- **ABD faizi** — FRED FEDFUNDS API
-- **TR faizi** — `.env` ile manuel (R_TRY)
