@@ -47,8 +47,9 @@ export default function ImpliedDepreciation({ data }: Props) {
             domain={[0, "auto"]}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              `${value.toFixed(2)}%`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            formatter={(value: any, name: any) => [
+              value != null ? `${Number(value).toFixed(2)}%` : "—",
               name === "market" ? "Market-implied" : "CIP-implied",
             ]}
             contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 6 }}
