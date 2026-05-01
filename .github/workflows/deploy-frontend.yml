@@ -5,10 +5,12 @@ on:
     branches: [main]
 
 permissions:
-  contents: write   # gh-pages needs to push to the gh-pages branch
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,17 +28,22 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
-          # Override the API URL at build time with the Render backend URL.
-          # Set this secret in: GitHub repo → Settings → Secrets → Actions
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
 
-      - name: Deploy to gh-pages
-        working-directory: frontend
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          npx gh-pages -d dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
