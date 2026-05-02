@@ -12,8 +12,10 @@ jobs:
     steps:
       - name: Ping backend health endpoint
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.VITE_API_URL }}/health" --max-time 30)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.VITE_API_URL }}/health" --max-time 60) || STATUS="timeout"
           echo "Response: $STATUS"
-          if [ "$STATUS" != "200" ]; then
+          if [ "$STATUS" = "timeout" ]; then
+            echo "Warning: backend timed out (cold start?) — ping still sent"
+          elif [ "$STATUS" != "200" ]; then
             echo "Warning: backend returned $STATUS"
           fi
